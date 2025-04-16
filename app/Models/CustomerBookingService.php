@@ -21,7 +21,8 @@ class CustomerBookingService extends Model
         'booking_date', 
         'start_time', 
         'end_time', 
-        'booking_id'
+        'booking_id',
+        'saloon_id'
     ];
 
     // Define relationships if needed

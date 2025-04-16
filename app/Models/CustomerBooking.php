@@ -19,7 +19,8 @@ class CustomerBooking extends Model
         'csID', 
         'booking_date', 
         'start_time', 
-        'end_time'
+        'end_time',
+        'saloon_id'
     ];
 
     // Define the relationship with the 'Customer' model

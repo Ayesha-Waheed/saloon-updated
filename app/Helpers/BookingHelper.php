@@ -6,10 +6,11 @@ use Carbon\Carbon;
 
 class BookingHelper
 {
-    public static function getAvailableProviders($date)
+    public static function getAvailableProviders($date,$salonId)
     {
         return DB::table('service_providers')
             ->where('is_active', 1)
+            ->where('saloon_id', $salonId)
             ->get();
     }
 
@@ -491,8 +492,8 @@ public static function getServicePermutations($services, $providers, $date, $sal
 //     return ['success' => false];
 // }
 
-//final for multiple 
-public static function checkPermutation($assignment, $serviceOrder, $date, $maxWait, $customerSelectedProvider)
+//final for multiple but 1 minute time slots 
+public static function checkPermutation($assignment, $serviceOrder, $date, $maxWait, $customerSelectedProvider, $salonId)
 {
     $validCombinations = [];
 
@@ -516,7 +517,8 @@ public static function checkPermutation($assignment, $serviceOrder, $date, $maxW
         // Existing bookings for the provider
         $existing = DB::table('customer_bookings_services')
             ->where('spID', $providerId)
-            ->where('date', $date)
+            ->where('booking_date', $date)
+            ->where('saloon_id', $salonId) 
             ->select('start_time', 'end_time')
             ->get();
 
@@ -534,13 +536,26 @@ public static function checkPermutation($assignment, $serviceOrder, $date, $maxW
                 $bookedStart = Carbon::parse($booked->start_time);
                 $bookedEnd = Carbon::parse($booked->end_time);
 
+                // if (
+                //     $slotStart->between($bookedStart, $bookedEnd->subMinute()) ||
+                //     $slotEnd->between($bookedStart->addMinute(), $bookedEnd) ||
+                //     $slotEnd->equalTo($bookedEnd) ||
+                //     $slotStart->equalTo($bookedStart)
+                // ) {
+                //     $conflict = true;
+                //     break;
+                // }
                 if (
-                    $slotStart->between($bookedStart, $bookedEnd->subMinute()) ||
-                    $slotEnd->between($bookedStart->addMinute(), $bookedEnd)
+                    $slotStart < $bookedEnd &&
+                    $slotEnd > $bookedStart
                 ) {
                     $conflict = true;
                     break;
                 }
+                
+
+
+
             }
 
             if (!$conflict) {
@@ -553,7 +568,7 @@ public static function checkPermutation($assignment, $serviceOrder, $date, $maxW
             }
 
             // Move to the next slot
-            $slotStart = $slotStart->copy()->addMinutes(1);
+            $slotStart = $slotStart->copy()->addMinutes(5);
         }
 
         $serviceSlots[$serviceId] = $availableSlots;
@@ -597,9 +612,10 @@ public static function checkPermutation($assignment, $serviceOrder, $date, $maxW
 
         if ($valid) {
             $validCombinations[] = [
-                'slots' => $combination,
+                'saloon_id'=>$salonId,
                 'start_time' => $combination[0]['start_time'],
                 'end_time' => end($combination)['end_time'],
+                'slots' => $combination,
             ];
         }
     }
